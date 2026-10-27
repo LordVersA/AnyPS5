@@ -1,5 +1,5 @@
 #include "prx/libSceLibreSsl3/libSceLibreSsl3.hpp"
-#include "prx/libc/libc.hpp"
+#include "prx/libc/include/Api.hpp"
 #include "prx/libc/include/general/VabiMacros.hpp"
 #include "prx/libc/include/ApplicationHeap.hpp"
 #include <algorithm>
@@ -65,13 +65,7 @@ void* APS5_VABI UnexpectedRealign_nid_no_patch(void*, std::size_t, std::size_t) 
 int APS5_VABI UnexpectedPosixAlign_nid_no_patch(void**, std::size_t, std::size_t) { throw std::runtime_error("unexpected posix_memalign"); }
 
 void Release(String* value) {
-    if (!value) return;
-    const auto data = value->data;
-    value->length = 0;
-    value->data = nullptr;
-    value->flags &= ~std::int64_t{0x10};
-    free_nid_postfix(data);
-    free_nid_postfix(value);
+    ASN1_INTEGER_free_nid_postfix(value);
 }
 
 void Check(std::span<const unsigned char> encoded, std::span<const unsigned char> magnitude, bool negative = false) {
@@ -84,6 +78,7 @@ void Check(std::span<const unsigned char> encoded, std::span<const unsigned char
     Require(*cursor == 0xa5 && value->length == static_cast<int>(magnitude.size()));
     Require(value->type == (negative ? 0x102 : 2) && value->flags == 0);
     Require(value->data != bytes.data());
+    Require(ASN1_STRING_get0_data_nid_postfix(value) == value->data);
     Require(std::equal(magnitude.begin(), magnitude.end(), value->data));
     Require(std::equal(encoded.begin(), encoded.end(), bytes.begin()));
     Release(value);
@@ -129,6 +124,11 @@ void Integers() {
 }
 
 void Ownership() {
+    ASN1_INTEGER_free_nid_postfix(nullptr);
+    bool rejectedNull = false;
+    try { ASN1_STRING_get0_data_nid_postfix(nullptr); }
+    catch (const std::invalid_argument&) { rejectedNull = true; }
+    Require(rejectedNull);
     const unsigned char encoded[] = {2, 1, 42};
     const unsigned char* cursor = encoded;
     auto* value = static_cast<String*>(d2i_ASN1_INTEGER_nid_postfix(nullptr, &cursor, sizeof(encoded)));

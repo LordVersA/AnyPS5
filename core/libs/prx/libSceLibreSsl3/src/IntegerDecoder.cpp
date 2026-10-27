@@ -1,11 +1,13 @@
 #include "prx/libSceLibreSsl3/libSceLibreSsl3.hpp"
-#include "prx/libc/libc.hpp"
+#include "prx/libc/include/Api.hpp"
 #include "prx/libc/include/General.hpp"
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <limits>
 #include <span>
+#include <stdexcept>
+#include <string>
 
 
 namespace {
@@ -77,6 +79,15 @@ void FreeInteger(void* value) {
 } // namespace
 
 extern "C" {
+
+void APS5_VABI ASN1_INTEGER_free_nid_postfix(Asn1String* value) {
+    FreeInteger(value);
+}
+
+const unsigned char* APS5_VABI ASN1_STRING_get0_data_nid_postfix(const Asn1String* value) {
+    if (!value) throw std::invalid_argument(std::string(__func__) + ": null string");
+    return value->data;
+}
 
 void* APS5_VABI d2i_ASN1_INTEGER_nid_postfix(void** output, const unsigned char** input, std::int64_t length) {
     if (length < 0) return nullptr;
